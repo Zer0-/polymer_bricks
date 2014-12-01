@@ -1,0 +1,7 @@
+*egg-info
+*.pyc
+*~
+*.swp
+.sass-cache
+polymer_components
+tools
