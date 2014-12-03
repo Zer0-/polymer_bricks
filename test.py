@@ -1,7 +1,7 @@
 import os
-import polymer_bricks as pb
+import package_builder as pb
 
-components_dir = ""
+components_dir = "polymer_bricks"
 
 def _monkeypatch_build_depmap():
     #this is just to speed up this test module

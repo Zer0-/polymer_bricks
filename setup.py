@@ -1,17 +1,30 @@
 from setuptools import setup
 from setuptools.command.install import install
+from setuptools.command.develop import develop
 import os
 import logging
 logging.basicConfig(level=logging.INFO)
 
 here = os.path.abspath(os.path.dirname(__file__))
 sources_dir = os.path.join(here, 'tools/bin/components')
-package = os.path.join(here, 'polymer_components')
+package = os.path.join(here, 'polymer_bricks/polymer_components')
 #polymer_tools_repo = "http://github.com/Polymer/tools.git"
 polymer_tools_repo = "https://github.com/Zer0-/tools.git"
 extra_sources = (
     "https://github.com/chjj/marked",
 )
+
+requires = [
+    'bricks',
+]
+
+setup_requires = [
+    'lxml',
+]
+
+links = [
+    'git+https://github.com/Zer0-/bricks.git#egg=bricks',
+]
 
 def env_check():
     commands = ('git', 'npm', 'node')
@@ -25,7 +38,7 @@ def git_clone(repo, target_dir):
 env_check()
 
 def build_component_package():
-    import polymer_bricks
+    import package_builder
     git_clone(polymer_tools_repo, here)
     #run pull-all.sh
     _tools = os.path.join(here, 'tools/bin')
@@ -35,22 +48,25 @@ def build_component_package():
 
     if not os.path.isdir(package):
         os.mkdir(package)
-    polymer_bricks.build_component_directory(sources_dir, package)
+    package_builder.build_component_directory(sources_dir, package)
 
-requires = [
-    'bricks',
-]
+def with_build(command_subclass):
+    orig_run = command_subclass.run
 
-setup_requires = ['lxml']
-
-links = [
-    'git+https://github.com/Zer0-/bricks.git#egg=bricks',
-]
-
-class BuildPackageAndInstall(install):
-    def run(self):
+    def modified_run(self):
         build_component_package()
-        install.run(self)
+        orig_run(self)
+
+    command_subclass.run = modified_run
+    return command_subclass
+
+@with_build
+class BuildPackageAndInstall(install):
+    pass
+
+@with_build
+class BuildPackageAndDevelop(develop):
+    pass
 
 setup(
     name='polymer_bricks',
@@ -62,10 +78,11 @@ setup(
     ],
     author='Philipp Volguine',
     author_email='phil.volguine@gmail.com',
-    packages=['polymer_components'],
+    packages=['polymer_bricks'],
     include_package_data=True,
     cmdclass={
-        'install': BuildPackageAndInstall
+        'install': BuildPackageAndInstall,
+        'develop': BuildPackageAndDevelop
     },
     install_requires=requires,
     dependency_links=links,
