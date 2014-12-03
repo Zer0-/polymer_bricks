@@ -1,5 +1,5 @@
 from setuptools import setup
-import polymer_bricks
+from setuptools.command.install import install
 import os
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -23,25 +23,34 @@ def git_clone(repo, target_dir):
     os.system("cd {}; git clone {}".format(target_dir, repo))
 
 env_check()
-git_clone(polymer_tools_repo, here)
-#run pull-all.sh
-_tools = os.path.join(here, 'tools/bin')
-os.system('cd {}; sh {}/pull-all.sh'.format(_tools, _tools))
-for extra in extra_sources:
-    git_clone(extra, sources_dir)
 
-if not os.path.isdir(package):
-    os.mkdir(package)
-polymer_bricks.build_component_directory(sources_dir, package)
+def build_component_package():
+    import polymer_bricks
+    git_clone(polymer_tools_repo, here)
+    #run pull-all.sh
+    _tools = os.path.join(here, 'tools/bin')
+    os.system('cd {}; sh {}/pull-all.sh'.format(_tools, _tools))
+    for extra in extra_sources:
+        git_clone(extra, sources_dir)
+
+    if not os.path.isdir(package):
+        os.mkdir(package)
+    polymer_bricks.build_component_directory(sources_dir, package)
 
 requires = [
-    'lxml',
     'bricks',
 ]
+
+setup_requires = ['lxml']
 
 links = [
     'git+https://github.com/Zer0-/bricks.git#egg=bricks',
 ]
+
+class BuildPackageAndInstall(install):
+    def run(self):
+        build_component_package()
+        install.run(self)
 
 setup(
     name='polymer_bricks',
@@ -55,6 +64,10 @@ setup(
     author_email='phil.volguine@gmail.com',
     packages=['polymer_components'],
     include_package_data=True,
+    cmdclass={
+        'install': BuildPackageAndInstall
+    },
     install_requires=requires,
     dependency_links=links,
+    setup_requires=setup_requires,
 )
