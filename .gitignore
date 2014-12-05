@@ -3,5 +3,6 @@
 *~
 *.swp
 .sass-cache
+*.egg
 polymer_components
 tools

@@ -26,6 +26,7 @@ def test_find_components():
     for c in components:
         assert isinstance(c, pb.Component)
         assert os.path.isfile(c.path)
+        assert c.inlined == False
 
 def test_component_hash():
     p = 'http://localhost:8080/test.js'
@@ -42,16 +43,19 @@ def test_find_deps():
     for dep in deps:
         assert dep.type in pb.ComponentTypes
         assert os.path.isfile(dep.path)
-        assert dep in all_components
 
 def test_build_depmap():
     depmap = pb.build_depmap(components_dir)
+    for dep in depmap:
+        if dep.type == pb.ComponentTypes.html:
+            assert dep.inlined == False
 
 def test_modify_web_component():
+    #Warning: this test might change if paper-tab.html changes!
     path = os.path.join(components_dir, 'paper-tabs/paper-tab.html')
     component = pb.component_from_path(path)
     doc = pb.modify_web_component(component)
-    assert len(pb.find_external_external_resources(doc)) == 0
+    assert len(pb.find_external_external_resources(doc)) == 1
 
 def test_pretty_name():
     name = 'lib.min.js'
@@ -89,6 +93,9 @@ def test_all_components_rendering():
         def __init__(self, *args, **kwargs):
             self.args = args
             self.kwargs = kwargs
+
+    class StaticFile(_Args):
+        pass
 
     class WebComponent(_Args):
         pass

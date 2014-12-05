@@ -3,9 +3,11 @@ from shutil import copyfile
 from collections import namedtuple
 from enum import Enum
 from lxml.html import parse, tostring
+from bricks.static_manager import path_to_src
 import logging
 
-extensions = ('css', 'js', 'html')
+all_extensions = ('css', 'js', 'html')
+find_extensions = ('html',)
 ignore = (
     'demo',
     'index',
@@ -37,13 +39,16 @@ class ComponentTypes(Enum):
     js = 2
     html = 3
 
+    def __repr__(self):
+        return self.name.capitalize()
+
 typemap = {
     ComponentTypes.css: "StaticCss",
     ComponentTypes.js: "StaticJs",
     ComponentTypes.html: "WebComponent",
 }
 
-Component = namedtuple('Component', ['type', 'path'])
+Component = namedtuple('Component', ['type', 'path', 'inlined'])
 
 def src_external(src):
     return src.startswith('http') or src.startswith('//')
@@ -77,8 +82,8 @@ def get_name(component, directory):
     name = filename(path)
     return _preproc_name(dirname) + _preproc_name(name) + component.type.name.capitalize()
 
-def component_from_path(path):
-    return Component(ComponentTypes[file_extension(path)], path)
+def component_from_path(path, inlined=False):
+    return Component(ComponentTypes[file_extension(path)], path, inlined)
 
 def find_files(directory, extensions, ignore=None):
     subdirectories = iter(d for d in os.listdir(directory) if os.path.isdir(os.path.join(directory, d)))
@@ -95,18 +100,36 @@ def find_files(directory, extensions, ignore=None):
     return targets
         
 def find_components(directory):
-    files = find_files(directory, extensions, ignore)
+    files = find_files(directory, find_extensions, ignore)
     return [component_from_path(f) for f in files]
-
-def doc_from_component(component):
-    return parse(component.path)
 
 def find_external_external_resources(doc):
     links = doc.xpath("//link[@href]")
-    links = [l for l in links if l.attrib['href'] and file_extension(l.attrib['href']) in extensions]#filter out blank hrefs
+    links = [l for l in links if l.attrib['href'] and file_extension(l.attrib['href']) in all_extensions]#filter out blank hrefs
     scripts = doc.xpath('//script[@src]')
     scripts = [s for s in scripts if s.attrib['src']]#filter out blank hrefs
     return links + scripts
+
+def elem_is_import(elem):
+    return elem.attrib.get('rel') == 'import'
+
+def elem_has_parent(elem, tagname):
+    parent = elem.getparent()
+    if parent is None:
+        return False
+    elif parent.tag == tagname:
+        return True
+    else:
+        return elem_has_parent(parent, tagname)
+
+def elem_needs_removal(elem):
+    if elem_is_import(elem):
+        return True
+    else:
+        return not elem_has_parent(elem, 'template')
+
+def rewrite_elem_src(elem, parent_component):
+    return elem#TODO NOT IMPLEMENTED!
 
 def component_from_elem(elem, parent_component):
     src_attrib = {'link': 'href', 'script': 'src'}[elem.tag]
@@ -123,10 +146,10 @@ def component_from_elem(elem, parent_component):
                              src,
                              resource
                          ))
-    return component_from_path(resource)
+    return component_from_path(resource, not elem_needs_removal(elem))
 
 def find_deps(component):
-    doc = doc_from_component(component)
+    doc = parse(component.path)
     if doc.getroot() is None:
         return []
     elems = find_external_external_resources(doc)
@@ -154,17 +177,23 @@ def build_depmap(sources_dir):
 
 def modify_web_component(component):
     """removes external script and link tags from doc"""
-    doc = doc_from_component(component)
+    doc = parse(component.path)
     if doc.getroot() is None:
         return doc
     link_elems = find_external_external_resources(doc)
     for elem in link_elems:
-        elem.getparent().remove(elem)
+        if elem_needs_removal(elem):
+            elem.getparent().remove(elem)
+        else:
+            rewrite_elem_src(elem, component)
     return doc
 
 def _render_nodep_component(component, directory):
     typename = get_name(component, directory).lower()
-    classname = typemap[component.type]
+    if component.inlined:
+        classname = 'StaticFile'
+    else:
+        classname = typemap[component.type]
     asset = component.path[len(directory):]
     return depless_template.format(
         classname=classname,
@@ -249,8 +278,3 @@ def build_component_directory(sources_dir, out_dir):
         out.write(render_python_module(depmap, sources_dir))
     logging.info("Wrote python module")
     logging.info("Done. ({} components)".format(len(depmap)))
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    components_dir = "/home/phil/Documents/web/polymer_bricks/sources/tools/bin/components"
-    build_component_directory(components_dir, "/tmp/components")
