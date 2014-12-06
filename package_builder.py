@@ -8,6 +8,7 @@ import logging
 
 all_extensions = ('css', 'js', 'html')
 find_extensions = ('html',)
+src_attrib_map = {'link': 'href', 'script': 'src'}
 ignore = (
     'demo',
     'index',
@@ -28,9 +29,10 @@ class {classname}:
     def __init__(self, *args):
         pass
 """
-module_topmatter = """from bricks.staticfiles import StaticJs, StaticCss, WebComponent
+module_topmatter = """from bricks.staticfiles import StaticJs, StaticCss, StaticFile
+from polymer_bricks.webcomponent import WebComponent
 
-asset_root='polymer_bricks:components'
+asset_root='polymer_bricks:polymer_components/components'
 
 """
 
@@ -128,12 +130,12 @@ def elem_needs_removal(elem):
     else:
         return not elem_has_parent(elem, 'template')
 
-def rewrite_elem_src(elem, parent_component):
-    return elem#TODO NOT IMPLEMENTED!
+def get_element_resource_url(elem):
+    src_attrib = src_attrib_map[elem.tag]
+    return elem.attrib[src_attrib]
 
-def component_from_elem(elem, parent_component):
-    src_attrib = {'link': 'href', 'script': 'src'}[elem.tag]
-    src = elem.attrib[src_attrib]
+def path_from_src(elem, parent_component):
+    src = get_element_resource_url(elem)
     if src_external(src):
         resource = src
     else:
@@ -146,6 +148,17 @@ def component_from_elem(elem, parent_component):
                              src,
                              resource
                          ))
+    return resource
+
+def rewrite_elem_src(elem, parent_component):
+    resource = path_from_src(elem, parent_component)
+    relpath = os.path.relpath(
+            path_to_src(resource),
+            path_to_src(parent_component.path))
+    elem.attrib[src_attrib_map[elem.tag]] = relpath
+
+def component_from_elem(elem, parent_component):
+    resource = path_from_src(elem, parent_component)
     return component_from_path(resource, not elem_needs_removal(elem))
 
 def find_deps(component):
