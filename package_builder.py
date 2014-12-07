@@ -1,8 +1,10 @@
 import os
+import re
 from shutil import copyfile
 from collections import namedtuple
 from enum import Enum
-from lxml.html import parse, tostring
+from lxml.html import parse, fromstring, tostring
+from lxml.etree import ParserError
 from bricks.static_manager import path_to_src
 import logging
 
@@ -18,6 +20,8 @@ ignore = (
     'highlightjs',
 )
 name_escape_chars = ('-', '.', '_')
+qmark_escape_string = "_and_questionmark"
+qmark_regex = "\S+[?]="
 
 depless_template = "{classname}('{typename}', asset=asset_root + '{asset}')"
 assign_template = "{varname} = {value}"
@@ -72,6 +76,16 @@ def _preproc_name(name, chari=0):
         return _capitalize(escaped)
     else:
         return _preproc_name(escaped, chari)
+
+def escape_qmarks(bad_html):
+    return re.sub(
+        qmark_regex,
+        lambda x: x.group(0).replace('?', qmark_escape_string),
+        bad_html
+    )
+
+def unescape_qmarks(escaped_bad_html):
+    return re.sub(qmark_escape_string, '?', escaped_bad_html)
 
 def get_name(component, directory):
     """Attempts to create a "unique", readable, camelcase variable name from a filepath"""
@@ -186,8 +200,11 @@ def build_depmap(sources_dir):
 
 def modify_web_component(component):
     """removes external script and link tags from doc"""
-    doc = parse(component.path)
-    if doc.getroot() is None:
+    with open(component.path, 'r') as f:
+        doc = escape_qmarks(f.read())
+    try:
+        doc = fromstring(doc)
+    except ParserError:
         return doc
     link_elems = find_external_external_resources(doc)
     for elem in link_elems:
@@ -261,13 +278,13 @@ def copy_component(component, sources_dir, out_dir):
     os.makedirs(os.path.join(out_dir, rel_dir), exist_ok=True)
     if component.type == ComponentTypes.html:
         try:
-            src = tostring(modify_web_component(component))
+            src = unescape_qmarks(tostring(modify_web_component(component)).decode('utf-8'))
             #lxml wraps our components in tags we don't need
-            src = src.replace(b'<html><head>', b'')
-            src = src.replace(b'</head></html>', b'')
-        except TypeError:#tostring fails on blank or comment-only documents
-            src = bytes()
-        with open(os.path.join(out_dir, rel_path), 'wb') as out:
+            src = src.replace('<html><head>', '')
+            src = src.replace('</head></html>', '')
+        except TypeError as e:#tostring fails on blank or comment-only documents
+            src = str()
+        with open(os.path.join(out_dir, rel_path), 'w') as out:
             out.write(src)
         logging.info("Wrote (modified) {}".format(rel_path))
     else:

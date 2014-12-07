@@ -50,7 +50,6 @@ def run_webcomponents_gulp():
                     os.path.join(wc_dir, 'webcomponents.js'))
 
 def build_component_package():
-    import package_builder
     git_clone(polymer_tools_repo, here)
     #run pull-all.sh
     _tools = os.path.join(here, 'tools/bin')
@@ -59,16 +58,16 @@ def build_component_package():
         git_clone(extra, sources_dir)
 
     run_webcomponents_gulp()
-
     if not os.path.isdir(package):
         os.mkdir(package)
-    package_builder.build_component_directory(sources_dir, package)
 
 def with_build(command_subclass):
     orig_run = command_subclass.run
 
     def modified_run(self):
-        build_component_package()
+        import package_builder
+        #build_component_package()
+        package_builder.build_component_directory(sources_dir, package)
         orig_run(self)
 
     command_subclass.run = modified_run

@@ -3,6 +3,14 @@ import package_builder as pb
 
 components_dir = "polymer_bricks"
 
+bad_html = """
+<div class="scroll-button" hidden?="{{!scrollable || hideScrollButton}}">
+    <paper-icon-button data-screwith="?" icon="chevron-left" class="{{ {hidden: leftHidden} | tokenList }}" on-down="{{holdLeft}}" on-up="{{releaseHold}}"></paper-icon-button>
+</div>
+"""
+
+escaped_html = bad_html.replace('?', pb.qmark_escape_string, 1)
+
 def _monkeypatch_build_depmap():
     #this is just to speed up this test module
     from functools import lru_cache
@@ -108,6 +116,30 @@ def test_all_components_rendering():
 
     exec(source, locals())
 
+def test_escape_qmarks():
+    subbed = pb.escape_qmarks(bad_html)
+    assert subbed == escaped_html
+
+def test_unescape_qmarks():
+    assert pb.unescape_qmarks(escaped_html) == bad_html
+
+
+tests = (
+    test_extension,
+    test_find_files,
+    test_find_components,
+    test_component_hash,
+    test_find_deps,
+    test_build_depmap,
+    test_modify_web_component,
+    test_pretty_name,
+    test_get_name,
+    test_component_rendering,
+    test_all_components_rendering,
+    test_escape_qmarks,
+    test_unescape_qmarks,
+)
+
 def main():
     import sys
     global components_dir
@@ -117,17 +149,10 @@ def main():
         return
     components_dir = os.path.abspath(sys.argv[-1])
     _monkeypatch_build_depmap()
-    test_extension()
-    test_find_files()
-    test_find_components()
-    test_component_hash()
-    test_find_deps()
-    test_build_depmap()
-    test_modify_web_component()
-    test_pretty_name()
-    test_get_name()
-    test_component_rendering()
-    test_all_components_rendering()
-    print("OK")
+    for test in tests:
+        test()
+        print('.', end='')
+    print("OK [{} passed]".format(len(tests)))
 
-main()
+if __name__ == "__main__":
+    main()
