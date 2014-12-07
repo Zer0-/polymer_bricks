@@ -10,9 +10,10 @@ sources_dir = os.path.join(here, 'tools/bin/components')
 package = os.path.join(here, 'polymer_bricks/polymer_components')
 #polymer_tools_repo = "http://github.com/Polymer/tools.git"
 polymer_tools_repo = "https://github.com/Zer0-/tools.git"
-extra_sources = (
-    "https://github.com/chjj/marked",
-)
+#extra_sources = (
+#    "https://github.com/chjj/marked",
+#)
+extra_sources = ()
 
 requires = [
     'bricks',
@@ -66,7 +67,7 @@ def with_build(command_subclass):
 
     def modified_run(self):
         import package_builder
-        #build_component_package()
+        build_component_package()
         package_builder.build_component_directory(sources_dir, package)
         orig_run(self)
 

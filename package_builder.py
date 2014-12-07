@@ -19,7 +19,7 @@ ignore = (
     'jquery',
     'highlightjs',
 )
-name_escape_chars = ('-', '.', '_')
+name_escape_chars = ('/', '-', '.', '_')
 qmark_escape_string = "_and_questionmark"
 qmark_regex = "\S+[?]="
 
@@ -37,6 +37,7 @@ module_topmatter = """from bricks.staticfiles import StaticJs, StaticCss, Static
 from polymer_bricks.webcomponent import WebComponent
 
 asset_root='polymer_bricks:polymer_components/components'
+
 """
 
 class ComponentTypes(Enum):
@@ -67,15 +68,12 @@ def filename(path):
 def _capitalize(word):
     return word[0].capitalize() + word[1:]
 
-def _preproc_name(name, chari=0):
+def _preproc_name(name):
     """escapes dashes and dots by making the word camelCase"""
-    char = name_escape_chars[chari]
-    escaped = ''.join(_capitalize(i) for i in name.split(char))
-    chari += 1
-    if chari >= len(name_escape_chars):
-        return _capitalize(escaped)
-    else:
-        return _preproc_name(escaped, chari)
+    escaped = name
+    for char in name_escape_chars:
+        escaped = ''.join(_capitalize(i) for i in escaped.split(char))
+    return _capitalize(escaped)
 
 def escape_qmarks(bad_html):
     return re.sub(
@@ -90,12 +88,7 @@ def unescape_qmarks(escaped_bad_html):
 def get_name(component, directory):
     """Attempts to create a "unique", readable, camelcase variable name from a filepath"""
     path = component.path
-    if src_external(path):
-        return _preproc_name(filename(path) + component.type.name.capitalize())
-    leading_dirs = path[len(directory):].lstrip('/').split('/')[:-1]
-    dirname = ''.join(_preproc_name(d) for d in leading_dirs if len(d) > 3 or d != d.lower())
-    name = filename(path)
-    return _preproc_name(dirname) + _preproc_name(name) + component.type.name.capitalize()
+    return _preproc_name(path_to_src(path))
 
 def component_from_path(path, inlined=False):
     return Component(ComponentTypes[file_extension(path)], path, inlined)
