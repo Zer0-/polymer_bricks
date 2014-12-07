@@ -85,7 +85,7 @@ def escape_qmarks(bad_html):
 def unescape_qmarks(escaped_bad_html):
     return re.sub(qmark_escape_string, '?', escaped_bad_html)
 
-def get_name(component, directory):
+def get_name(component):
     """Attempts to create a "unique", readable, camelcase variable name from a filepath"""
     path = component.path
     return _preproc_name(path_to_src(path))
@@ -208,7 +208,7 @@ def modify_web_component(component):
     return doc
 
 def _render_nodep_component(component, directory):
-    typename = get_name(component, directory).lower()
+    typename = get_name(component).lower()
     if component.inlined:
         classname = 'StaticFile'
     else:
@@ -221,7 +221,7 @@ def _render_nodep_component(component, directory):
     )
 
 def _render_nodep_component_var(component, directory):
-    varname = get_name(component, directory)
+    varname = get_name(component)
     return assign_template.format(
         varname=varname,
         value=_render_nodep_component(component, directory)
@@ -230,8 +230,8 @@ def _render_nodep_component_var(component, directory):
 def render_component(component, deps, directory):
     indent = ' ' * 4 * 2
     if deps:
-        classname = get_name(component, directory)
-        depnames = [indent + get_name(c, directory) for c in deps]
+        classname = get_name(component)
+        depnames = [indent + get_name(c) for c in deps]
         deplist = ',\n'.join(depnames)
         deplist += ',\n' + indent + _render_nodep_component(component, directory)
         return component_class_template.format(

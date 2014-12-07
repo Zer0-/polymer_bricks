@@ -73,7 +73,7 @@ def test_pretty_name():
 def test_get_name():
     path = os.path.join(components_dir, 'paper-tabs/paper-tab.html')
     component = pb.component_from_path(path)
-    name = pb.get_name(component, components_dir)
+    name = pb.get_name(component)
     assert name == "PaperTabsPaperTabHtml"
 
 def test_component_rendering():
