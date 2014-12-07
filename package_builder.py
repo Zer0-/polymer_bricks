@@ -33,7 +33,6 @@ module_topmatter = """from bricks.staticfiles import StaticJs, StaticCss, Static
 from polymer_bricks.webcomponent import WebComponent
 
 asset_root='polymer_bricks:polymer_components/components'
-
 """
 
 class ComponentTypes(Enum):
@@ -152,10 +151,7 @@ def path_from_src(elem, parent_component):
 
 def rewrite_elem_src(elem, parent_component):
     resource = path_from_src(elem, parent_component)
-    relpath = os.path.relpath(
-            path_to_src(resource),
-            path_to_src(parent_component.path))
-    elem.attrib[src_attrib_map[elem.tag]] = relpath
+    elem.attrib[src_attrib_map[elem.tag]] = '/' + path_to_src(resource)
 
 def component_from_elem(elem, parent_component):
     resource = path_from_src(elem, parent_component)

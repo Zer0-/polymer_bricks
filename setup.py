@@ -31,20 +31,34 @@ def env_check():
     for c in commands:
         if os.system(c + ' --version') != 0:
             raise Exception("Need " + c)
+    github_key = os.system("ssh -vT git@github.com")
+    if github_key != 256:
+        raise Exception("Please add your machine's public key to your gihub account")
 
 def git_clone(repo, target_dir):
     os.system("cd {}; git clone {}".format(target_dir, repo))
 
 env_check()
 
+def run_webcomponents_gulp():
+    import shutil
+    wc_dir = os.path.join(here, 'tools/bin/components/webcomponentsjs')
+    os.system('cd {}; npm install'.format(wc_dir))
+    os.system('cd {}; npm install gulp'.format(wc_dir))
+    os.system('cd {}; ./node_modules/gulp/bin/gulp.js build'.format(wc_dir))
+    shutil.copyfile(os.path.join(wc_dir, 'dist/webcomponents.js'),
+                    os.path.join(wc_dir, 'webcomponents.js'))
+
 def build_component_package():
     import package_builder
     git_clone(polymer_tools_repo, here)
     #run pull-all.sh
     _tools = os.path.join(here, 'tools/bin')
-    os.system('cd {}; sh {}/pull-all.sh'.format(_tools, _tools))
+    os.system('cd {}; bash {}/pull-all.sh'.format(_tools, _tools))
     for extra in extra_sources:
         git_clone(extra, sources_dir)
+
+    run_webcomponents_gulp()
 
     if not os.path.isdir(package):
         os.mkdir(package)
