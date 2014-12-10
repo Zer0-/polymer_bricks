@@ -59,11 +59,11 @@ def test_build_depmap():
             assert dep.inlined == False
 
 def test_modify_web_component():
+    from lxml.html import parse
     #Warning: this test might change if paper-tab.html changes!
     path = os.path.join(components_dir, 'paper-tabs/paper-tab.html')
-    component = pb.component_from_path(path)
-    doc = pb.modify_web_component(component)
-    assert len(pb.find_external_external_resources(doc)) == 1
+    doc = parse(path)
+    assert len(pb.find_external_external_resources(doc)) == 2
 
 def test_pretty_name():
     name = 'lib.min.js'
@@ -123,6 +123,12 @@ def test_escape_qmarks():
 def test_unescape_qmarks():
     assert pb.unescape_qmarks(escaped_html) == bad_html
 
+def test_tostring():
+    from lxml.html import fromstring
+    doc = fromstring(pb.escape_qmarks(bad_html))
+    out = pb.string_from_doc(doc)
+    assert "{{!scrollable" in out
+    assert "hidden?" in out
 
 tests = (
     test_extension,
@@ -138,6 +144,7 @@ tests = (
     test_all_components_rendering,
     test_escape_qmarks,
     test_unescape_qmarks,
+    test_tostring,
 )
 
 def main():

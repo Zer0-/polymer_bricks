@@ -5,6 +5,7 @@ from collections import namedtuple
 from enum import Enum
 from lxml.html import parse, fromstring, tostring
 from lxml.etree import ParserError
+import html5lib
 from bricks.static_manager import path_to_src
 import logging
 
@@ -65,16 +66,6 @@ def file_extension(filepath):
 def filename(path):
     return os.path.splitext(os.path.basename(path))[0]
 
-def _capitalize(word):
-    return word[0].capitalize() + word[1:]
-
-def _preproc_name(name):
-    """escapes dashes and dots by making the word camelCase"""
-    escaped = name
-    for char in name_escape_chars:
-        escaped = ''.join(_capitalize(i) for i in escaped.split(char))
-    return _capitalize(escaped)
-
 def escape_qmarks(bad_html):
     return re.sub(
         qmark_regex,
@@ -84,6 +75,16 @@ def escape_qmarks(bad_html):
 
 def unescape_qmarks(escaped_bad_html):
     return re.sub(qmark_escape_string, '?', escaped_bad_html)
+
+def _capitalize(word):
+    return word[0].capitalize() + word[1:]
+
+def _preproc_name(name):
+    """escapes dashes and dots by making the word camelCase"""
+    escaped = name
+    for char in name_escape_chars:
+        escaped = ''.join(_capitalize(i) for i in escaped.split(char))
+    return _capitalize(escaped)
 
 def get_name(component):
     """Attempts to create a "unique", readable, camelcase variable name from a filepath"""
@@ -191,12 +192,18 @@ def build_depmap(sources_dir):
         _build_depmap(component, depmap)
     return depmap
 
+def string_from_doc(doc):
+    walker = html5lib.getTreeWalker("lxml")
+    serializer = html5lib.serializer.HTMLSerializer()
+    output = unescape_qmarks(serializer.render(walker(doc)))
+    return output
+
 def modify_web_component(component):
     """removes external script and link tags from doc"""
     with open(component.path, 'r') as f:
-        doc = escape_qmarks(f.read())
+        doc = f.read()
     try:
-        doc = fromstring(doc)
+        doc = fromstring(escape_qmarks(doc))
     except ParserError:
         return doc
     link_elems = find_external_external_resources(doc)
@@ -205,7 +212,7 @@ def modify_web_component(component):
             elem.getparent().remove(elem)
         else:
             rewrite_elem_src(elem, component)
-    return doc
+    return string_from_doc(doc)
 
 def _render_nodep_component(component, directory):
     typename = get_name(component).lower()
@@ -270,13 +277,7 @@ def copy_component(component, sources_dir, out_dir):
     rel_dir = os.path.dirname(rel_path)
     os.makedirs(os.path.join(out_dir, rel_dir), exist_ok=True)
     if component.type == ComponentTypes.html:
-        try:
-            src = unescape_qmarks(tostring(modify_web_component(component)).decode('utf-8'))
-            #lxml wraps our components in tags we don't need
-            src = src.replace('<html><head>', '')
-            src = src.replace('</head></html>', '')
-        except TypeError as e:#tostring fails on blank or comment-only documents
-            src = str()
+        src = modify_web_component(component)
         with open(os.path.join(out_dir, rel_path), 'w') as out:
             out.write(src)
         logging.info("Wrote (modified) {}".format(rel_path))
