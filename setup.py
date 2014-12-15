@@ -68,7 +68,7 @@ def with_build(command_subclass):
 
     def modified_run(self):
         import package_builder
-        #build_component_package()
+        build_component_package()
         package_builder.build_component_directory(sources_dir, package)
         orig_run(self)
 
