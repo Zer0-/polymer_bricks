@@ -14,7 +14,11 @@ polymer_tools_repo = "https://github.com/Zer0-/tools.git"
 #    "https://github.com/chjj/marked",
 #)
 
-marked_element_repo = "https://github.com/Zer0-/marked-element.git"
+pull_update = [
+    ('marked-element', "https://github.com/Zer0-/marked-element.git"),
+    ('github-elements', "https://github.com/Zer0-/github-elements.git"),
+]
+
 extra_sources = ()
 
 requires = [
@@ -65,10 +69,11 @@ def build_component_package():
     if not os.path.isdir(package):
         os.mkdir(package)
 
-    os.system('cd {}; git pull {}'.format(
-        os.path.join(_tools, 'components/marked-element'),
-        marked_element_repo
-    ))
+    for component, giturl in pull_update:
+        os.system('cd {}; git pull {}'.format(
+            os.path.join(_tools, 'components', component),
+            giturl
+        ))
 
 def with_build(command_subclass):
     orig_run = command_subclass.run
