@@ -13,6 +13,8 @@ polymer_tools_repo = "https://github.com/Zer0-/tools.git"
 #extra_sources = (
 #    "https://github.com/chjj/marked",
 #)
+
+marked_element_repo = "https://github.com/Zer0-/marked-element.git"
 extra_sources = ()
 
 requires = [
@@ -62,6 +64,11 @@ def build_component_package():
     run_webcomponents_gulp()
     if not os.path.isdir(package):
         os.mkdir(package)
+
+    os.system('cd {}; git pull {}'.format(
+        os.path.join(_tools, 'components/marked-element'),
+        marked_element_repo
+    ))
 
 def with_build(command_subclass):
     orig_run = command_subclass.run
