@@ -8,15 +8,15 @@ logging.basicConfig(level=logging.INFO)
 here = os.path.abspath(os.path.dirname(__file__))
 sources_dir = os.path.join(here, 'tools/bin/components')
 package = os.path.join(here, 'polymer_bricks/polymer_components')
-#polymer_tools_repo = "http://github.com/Polymer/tools.git"
-polymer_tools_repo = "https://github.com/Zer0-/tools.git"
+polymer_tools_repo = "http://github.com/Polymer/tools.git"
+#polymer_tools_repo = "https://github.com/Zer0-/tools.git"
 #extra_sources = (
 #    "https://github.com/chjj/marked",
 #)
 
 pull_update = [
-    ('marked-element', "https://github.com/Zer0-/marked-element.git"),
-    ('github-elements', "https://github.com/Zer0-/github-elements.git"),
+    #('marked-element', "https://github.com/Zer0-/marked-element.git"),
+    #('github-elements', "https://github.com/Zer0-/github-elements.git"),
 ]
 
 extra_sources = ()
