@@ -9,6 +9,9 @@ import html5lib
 from bricks.static_manager import path_to_src
 import logging
 
+class MissingDependency(Exception):
+    pass
+
 all_extensions = ('css', 'js', 'html')
 find_extensions = ('html',)
 src_attrib_map = {'link': 'href', 'script': 'src'}
@@ -155,6 +158,7 @@ def path_from_src(elem, parent_component):
                              src,
                              resource
                          ))
+            raise MissingDependency(resource)
     return resource
 
 def rewrite_elem_src(elem, parent_component):
@@ -172,24 +176,25 @@ def find_deps(component):
     elems = find_external_external_resources(doc)
     return [component_from_elem(elem, component) for elem in elems]
 
-def _build_depmap(component, depmap):
-    if component.type == ComponentTypes.html:
-        deps = find_deps(component)
-    else:
-        deps = []
-    depmap[component] = deps
-    for dep in deps:
-        if dep in depmap:
+def _build_depmap(components, depmap):
+    for component in components:
+        if component in depmap:
             continue
-        _build_depmap(dep, depmap)
+        if component.type == ComponentTypes.html:
+            deps = find_deps(component)
+        else:
+            deps = []
+        _build_depmap([d for d in deps if d not in depmap], depmap)
+        depmap[component] = deps
 
 def build_depmap(sources_dir):
     components = find_components(sources_dir)
     depmap = {}
     for component in components:
-        if component in depmap:
-            continue
-        _build_depmap(component, depmap)
+        try:
+            _build_depmap([component], depmap)
+        except MissingDependency:
+            logging.warn("Component " + str(component) + " will not be be built due to missing/poorly defined dependencies.")
     return depmap
 
 def string_from_doc(doc):
